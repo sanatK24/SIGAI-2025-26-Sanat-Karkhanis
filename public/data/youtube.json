@@ -1,0 +1,26 @@
+[
+  {
+    "type": "video",
+    "relai": false,
+    "id": "VlgLfiI7Jig",
+    "title": "Neural Nexus: AI Bootcamp | Neural Vision",
+    "description": "Watch the inauguration and Neural Vision session from our flagship AI Bootcamp event.",
+    "eventId": "40938a25-6133-447a-9ada-71a388509708"
+  },
+  {
+    "type": "video",
+    "relai": true,
+    "id": "fE_0cgw2hD8",
+    "title": "RELAI | When AI Meets the Adversary",
+    "description": "Dr. Jessica Cervi presents on adversarial AI in this RELAI lecture series episode.",
+    "eventId": "a4b1c8d0-3e7f-4a9b-8c6d-1f5e9b3a2c7e"
+  },
+  {
+    "type": "video",
+    "relai": true,
+    "id": "B7LKUQbycPo",
+    "title": "DSP | Building Advanced AI Applications and Agents in 1 hour",
+    "description": "Learn how to build new age AI and Agents using the latest tools and techniques in this comprehensive workshop.",
+    "eventId": "dsp-advanced-ai-2026"
+  }
+]

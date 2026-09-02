@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Sakshi Dhamane",
+    "role": "Treasurer",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925094/Sakshi2_treasurer_hk2f9l.webp",
+    "aspectRatio": "3684/3854",
+    "testimony": "Being part of SIGAI has been an intellectually rewarding journey. Our chapter thrives on a collaborative ethos where members contribute, learn, and innovate together, turning theoretical knowledge into practical impact.",
+    "socials": {
+      "instagram": "https://instagram.com/_01.sxkss_",
+      "linkedin": "https://www.linkedin.com/in/sakshi-dhamane-55a44a255/",
+      "github": "https://github.com/SakshiD01"
+    }
+  },
+  {
+    "name": "Utsab Nandi",
+    "role": "Webmaster",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925096/Utsab_webm_ypwdbg.webp",
+    "aspectRatio": "3477/3591",
+    "testimony": "Leading our chapter's web and technical operations as a founding Webmaster has been incredibly rewarding. Organizing events allowed me to engage with tech enthusiasts and stay at the forefront of AI advancements.",
+    "socials": {
+      "instagram": "https://instagram.com/utsabnandi_",
+      "linkedin": "https://www.linkedin.com/in/utsab-nandi/",
+      "github": "https://github.com/utsabnandi"
+    }
+  }
+]

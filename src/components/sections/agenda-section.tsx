@@ -1,0 +1,850 @@
+'use client';
+
+import React, { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Event } from '@/types/event';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+import { db } from '@/firebase/config';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+
+// Add JSX namespace
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
+
+interface EventCardProps {
+  relai?: boolean;
+  event: Event;
+}
+
+const EventCard: React.FC<EventCardProps> = ({ event }) => {
+  // Debug log for image properties
+  console.log('EventCard image debug:', event.title, event.agenda_image, event.image, event.event_template_image, event.event_homepage_image);
+
+  return (
+  <div className="relative flex flex-col h-full bg-card/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-border/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300">
+    <div className="relative h-48 w-full overflow-hidden">
+      <Image
+        src={event.agenda_image || event.image || event.event_template_image || event.event_homepage_image || 'https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768927076/sigai-logo_xk2vhl.webp'}
+        alt={event.title}
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+      {event.is_featured && (
+        <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+          New
+        </div>
+      )}
+    </div>
+    <div className="p-6 flex-1 flex flex-col">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-semibold text-text-primary line-clamp-2">
+          {event.title}
+        </h3>
+        <span className="text-sm text-text-secondary whitespace-nowrap ml-4">
+          {new Date(event.start_date).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          })}
+        </span>
+      </div>
+      <p className="text-sm text-text-secondary mb-4 line-clamp-3">
+        {event.description}
+      </p>
+      
+      {event.speakers && event.speakers.length > 0 && (
+        <div className="mt-auto pt-4 border-t border-border/20">
+          <div className="flex items-center -space-x-2">
+            {event.speakers.slice(0, 3).map((speaker, index) => (
+              <div key={index} className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-card">
+                <Image
+                  src={speaker.image || 'https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768927076/sigai-logo_xk2vhl.webp'}
+                  alt={speaker.name}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ))}
+            {event.speakers.length > 3 && (
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                +{event.speakers.length - 3}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-text-tertiary mt-2">
+            {event.speakers[0].name}
+            {event.speakers.length > 1 && ` + ${event.speakers.length - 1} more`}
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+  );
+};
+
+interface HorizontalEventCarouselProps {
+  relai?: boolean;
+  events: Event[];
+}
+
+const HorizontalEventCarousel: React.FC<HorizontalEventCarouselProps> = ({ events }) => {
+  const [activeIndex, setActiveIndex] = useState(1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to center the active card
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const activeCard = scrollContainer.querySelector('.card-active');
+    if (activeCard) {
+      const containerWidth = scrollContainer.offsetWidth;
+      const cardRect = activeCard.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const scrollLeft = cardRect.left - containerRect.left + (scrollContainer.scrollLeft - (containerWidth / 2) + (cardRect.width / 2));
+      
+      scrollContainer.scrollTo({
+        left: scrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  }, [activeIndex]);
+
+  // Handle scroll events to update active index
+  const handleScroll = () => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const containerWidth = scrollContainer.offsetWidth;
+    const scrollPosition = scrollContainer.scrollLeft + (containerWidth / 2);
+    const cards = Array.from(scrollContainer.querySelectorAll('.event-card'));
+    
+    let closestCard = cards[0];
+    let closestDistance = Infinity;
+
+    cards.forEach((card) => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.left + (rect.width / 2);
+      const distance = Math.abs(scrollPosition - cardCenter);
+      
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestCard = card;
+      }
+    });
+
+    const newIndex = cards.indexOf(closestCard);
+    if (newIndex !== -1 && newIndex !== activeIndex) {
+      setActiveIndex(newIndex);
+    }
+  };
+
+  return (
+    <div className="relative mt-12">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto hide-scrollbar snap-x snap-mandatory py-8 px-4 gap-6 scroll-smooth"
+        style={{
+          scrollPadding: '0 30%',
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'none'
+        }}
+      >
+        {/* Left padding for first card centering */}
+        <div className="flex-shrink-0 w-[calc(50%-200px)] md:w-[calc(50%-300px)]" />
+        
+        {events.map((event, index) => {
+          // Debug log for image properties in carousel
+          console.log('Carousel image debug:', event.title, event.agenda_image, event.image, event.event_template_image, event.event_homepage_image);
+          const isActive = index === activeIndex;
+          return (
+            <div 
+              key={event.id}
+              className={`event-card flex-shrink-0 w-[280px] md:w-[400px] transition-all duration-300 ease-in-out ${
+                isActive ? 'card-active scale-110 z-10' : 'scale-90 opacity-80 hover:opacity-100 hover:scale-95'
+              }`}
+              onClick={() => setActiveIndex(index)}
+            >
+              <Link href={`/events/${event.idx}`} className="block h-full">
+                <div className={`bg-card/50 backdrop-blur-sm border ${
+                  isActive ? 'border-primary/50' : 'border-border/50'
+                } rounded-2xl overflow-hidden shadow-lg h-full flex flex-col transition-all duration-300`}>
+                  <div className="relative h-48 w-full overflow-hidden">
+                    <Image
+                      src={event.agenda_image || event.image || event.event_template_image || event.event_homepage_image || 'https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768927076/sigai-logo_xk2vhl.webp'}
+                      alt={event.title}
+                      fill
+                      className="object-cover transition-transform duration-500 hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                    {event.is_featured && (
+                      <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                        New
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5 flex-1 flex flex-col">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-semibold text-foreground line-clamp-2">
+                        {event.title}
+                      </h3>
+                      <span className="text-sm text-muted-foreground whitespace-nowrap ml-4">
+                        {new Date(event.start_date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {event.description}
+                    </p>
+                    <div className="mt-auto pt-3 border-t border-border/20">
+                      <button className="w-full py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-md transition-colors">
+                        Learn More →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
+        
+        {/* Right padding for last card centering */}
+        <div className="flex-shrink-0 w-[calc(50%-200px)] md:w-[calc(50%-300px)]" />
+      </div>
+
+      {/* Navigation Dots */}
+      {events.length > 1 && (
+        <div className="flex justify-center mt-6 space-x-2">
+          {events.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setActiveIndex(index)}
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                index === activeIndex ? 'bg-primary w-6' : 'bg-border/50'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AgendaSection = () => {
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [pastEvents, setPastEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isShowingPastEvents, setIsShowingPastEvents] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  // YouTube preview state per video
+  interface YouTubeItem {
+    type: 'video' | 'playlist';
+    id: string;
+    title: string;
+    description: string;
+  }
+  const [youtubeData, setYoutubeData] = useState<YouTubeItem[]>([]);
+  const [previewStates, setPreviewStates] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    // Fetch YouTube data from local JSON
+    fetch('/data/youtube.json')
+      .then(res => res.json())
+      .then((data: YouTubeItem[]) => {
+        setYoutubeData(data);
+        // Initialize preview states for each video/playlist
+        const initialStates: Record<number, boolean> = {};
+        data.forEach((item, idx) => {
+          initialStates[idx] = false;
+        });
+        setPreviewStates(initialStates);
+      });
+  }, []);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        // Fetch only featured events
+        const eventsRef = collection(db, 'event_list');
+        const q = query(
+          eventsRef,
+          where('is_featured', '==', true),
+          orderBy('start_date', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        const allEvents: Event[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const eventObj = {
+            id: doc.id,
+            idx: data.idx ?? '',
+            title: data.title ?? '',
+            description: data.description ?? '',
+            time: data.time ?? '',
+            location: data.location ?? '',
+            image: data.image ?? '',
+            agenda_image: data.agenda_image ?? '',
+            event_template_image: data.event_template_image ?? '',
+            event_homepage_image: data.event_homepage_image ?? '',
+            category: data.category,
+            is_featured: data.is_featured,
+            registration_link: data.registration_link ?? null,
+            registration_fee_member: data.registration_fee_member,
+            registration_fee_non_member: data.registration_fee_non_member,
+            start_date: data.start_date ?? '',
+            calculated_end_date: data.calculated_end_date,
+            duration_days: data.duration_days,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+            slug: data.slug,
+            speakers: data.speakers,
+            details: data.details,
+            tags: data.tags
+          };
+          allEvents.push(eventObj);
+        });
+        // Split events into upcoming and past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcoming: Event[] = [];
+        const past: Event[] = [];
+        allEvents.forEach(event => {
+          // Parse eventDate as local date and set to midnight
+          const [year, month, day] = event.start_date.split('-').map(Number);
+          const eventDate = new Date(year, month - 1, day);
+          eventDate.setHours(0, 0, 0, 0);
+          if (eventDate >= today) {
+            upcoming.push(event);
+          } else {
+            past.push(event);
+          }
+        });
+        // Sort and select required number
+        upcoming.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+        past.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+        setUpcomingEvents(upcoming.slice(0, 1));
+        setPastEvents(past.slice(0, 4));
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setError('Failed to load events. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  // Auto-scroll carousel (disabled for now as per user feedback)
+  // useEffect(() => {
+  //   if (upcomingEvents.length <= 1) return;
+    
+  //   const interval = setInterval(() => {
+  //     setActiveIndex((prev) => (prev + 1) % upcomingEvents.length);
+  //   }, 5000);
+
+  //   return () => clearInterval(interval);
+  // }, [upcomingEvents.length]);
+
+  // Handle scroll to active index (only when activeIndex changes, not on scroll)
+  // Ensure isShowingPastEvents is correct on initial render and when activeIndex or event lists change
+  useEffect(() => {
+    // Decide which event list to use (upcoming or past)
+    let activeEvent: Event | undefined = undefined;
+    if (upcomingEvents.length > 0 && activeIndex < upcomingEvents.length) {
+      activeEvent = upcomingEvents[activeIndex];
+    } else if (pastEvents.length > 0 && activeIndex < pastEvents.length) {
+      activeEvent = pastEvents[activeIndex];
+    }
+    if (activeEvent) {
+      const [year, month, day] = activeEvent.start_date.split('-').map(Number);
+      const eventDate = new Date(year, month - 1, day);
+      eventDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setIsShowingPastEvents(eventDate < today);
+    }
+  }, [activeIndex, upcomingEvents, pastEvents]);
+
+  useEffect(() => {
+    if (!carouselRef.current) return;
+    const container = carouselRef.current;
+    const activeCard = container.querySelector(`[data-index="${activeIndex}"]`) as HTMLElement;
+    if (activeCard) {
+      // Temporarily disable scroll event listener
+      const handleScroll = container.onscroll;
+      container.onscroll = null;
+      // Calculate the scroll position to center the active card
+      const containerRect = container.getBoundingClientRect();
+      const cardRect = activeCard.getBoundingClientRect();
+      const scrollLeft = cardRect.left - containerRect.left + container.scrollLeft - ((containerRect.width - cardRect.width) / 2);
+      container.scrollTo({
+        left: scrollLeft,
+        behavior: 'smooth'
+      });
+      // Re-enable scroll event listener after scroll is complete
+      setTimeout(() => {
+        container.onscroll = handleScroll;
+      }, 500);
+    }
+  }, [activeIndex, upcomingEvents]);
+  
+  // Handle manual scroll to update active index
+  useEffect(() => {
+    const container = carouselRef.current;
+    if (!container) return;
+    
+    let scrollTimeout: NodeJS.Timeout;
+    let isScrolling = false;
+    
+    const handleScroll = () => {
+      if (isScrolling) return;
+      
+      // Clear any pending scroll timeout
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      
+      // Debounce the scroll event
+      scrollTimeout = setTimeout(() => {
+        if (!container || isScrolling) return;
+        
+        const containerRect = container.getBoundingClientRect();
+        const containerCenter = containerRect.left + containerRect.width / 2;
+        
+        // Find the card closest to the center
+        const cards = Array.from(container.querySelectorAll<HTMLElement>('[data-index]'));
+        let closestCard = null;
+        let minDistance = Infinity;
+        let closestIndex = activeIndex;
+        
+        cards.forEach((card) => {
+          const cardRect = card.getBoundingClientRect();
+          const cardCenter = cardRect.left + cardRect.width / 2;
+          const distance = Math.abs(cardCenter - containerCenter);
+          
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestCard = card;
+            closestIndex = parseInt(card.getAttribute('data-index') || '0', 10);
+          }
+        });
+        
+        if (closestCard && closestIndex !== activeIndex) {
+          isScrolling = true;
+          setActiveIndex(closestIndex);
+          
+          // Re-enable scrolling after animation completes
+          setTimeout(() => {
+            isScrolling = false;
+          }, 300);
+        }
+      }, 100);
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [activeIndex]);
+
+  if (loading) {
+    return (
+      <section id="agenda" className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="animate-pulse">
+            <div className="h-6 w-48 bg-gray-200 rounded"></div>
+            <div className="mt-4 h-12 w-3/4 bg-gray-200 rounded"></div>
+            <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="h-[500px] bg-gray-100 rounded-2xl"></div>
+              <div className="space-y-6">
+                <div className="h-8 w-64 bg-gray-200 rounded"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-48 bg-gray-100 rounded-xl"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section id="agenda" className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+          <div className="p-8 bg-red-50 rounded-xl">
+            <p className="text-red-600">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section id="agenda" className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
+      <div className="container mx-auto px-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="h-px w-6 bg-zinc-500" />
+            <h4 className="text-base font-medium text-text-secondary">Events & Media</h4>
+          </div>
+          <h2 className="mt-6 text-[40px] sm:text-[56px] lg:text-[64px] max-w-2xl leading-tight font-bold tracking-tighter text-text-primary">
+            Discover Our <span className="text-primary">Latest </span> 
+            <span className="text-primary">Flagship Events</span>
+          </h2>
+        </div>
+
+        <div className="mt-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Panel - Magazine Card (Full Height) */}
+            <div className="lg:col-span-1">
+              <div className="group relative h-full flex flex-col overflow-hidden rounded-3xl bg-card/50 backdrop-blur-sm border border-border/50 shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1">
+                <div className="relative h-64 lg:h-1/2">
+                  <Image
+                    src="https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768927079/SYNARA_COVER_ewnkvd.webp"
+                    alt="Synara Magazine - RAIT ACM SIGAI"
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                  <div className="absolute top-4 right-4 bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full z-10">
+                    New Issue
+                  </div>
+                </div>
+                
+                <div className="p-6 flex-1 flex flex-col">
+                  <h2 className="text-2xl font-bold text-foreground mb-2">Synara Magazine</h2>
+                  <p className="text-muted-foreground mb-4">
+                    Our Inaugural Magazine explores the cutting-edge world of Generative AI, featuring groundbreaking research and insights from leading experts in the field.
+                  </p>
+                  
+                  {/* Publication Details */}
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                      <span className="text-muted-foreground">Issue #1 • 2025 Edition</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                      <span className="text-muted-foreground">50+ Pages of AI Insights</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                      <span className="text-muted-foreground">Expert Articles & Research</span>
+                    </div>
+                  </div>
+
+                  {/* Features Grid */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="bg-primary/10 rounded-lg p-2.5 text-center">
+                      <div className="text-xs text-muted-foreground mb-0.5">Topics</div>
+                      <div className="text-sm font-semibold text-foreground">Gen AI</div>
+                    </div>
+                    <div className="bg-primary/10 rounded-lg p-2.5 text-center">
+                      <div className="text-xs text-muted-foreground mb-0.5">Format</div>
+                      <div className="text-sm font-semibold text-foreground">Digital</div>
+                    </div>
+                  </div>
+                  {/* Disclaimer below topics/format grid */}
+                  <div className="mb-4">
+                    <p className="text-xs text-muted-foreground italic text-center">
+                      <strong>Disclaimer:</strong> The articles published in this magazine represent the personal views and research of student authors. The RAIT ACM SIGAI committee, faculty, and college are not responsible for the opinions expressed therein. Content is intended for educational and informational purposes only.
+                    </p>
+                  </div>
+                  
+                  <div className="mt-auto pt-4 border-t border-border/20">
+                    <Link 
+                      href="/latest-issue" 
+                      className="w-full py-2.5 px-5 bg-primary hover:bg-primary/90 text-white rounded-full text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      Read Latest Issue
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </Link>
+
+                    {/* Sister Editions */}
+                    {/*
+                    <div className="mt-4 pt-4 border-t border-border/20">
+                      <p className="text-xs text-muted-foreground mb-3 font-medium">Sister Editions</p>
+                      <div className="flex gap-2">
+                        <a 
+                          href="#" 
+                          className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/10 hover:from-blue-500/20 hover:to-blue-600/20 border border-blue-500/20 rounded-lg p-2.5 transition-all duration-300 group"
+                          title="ACM Magazine"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-500/20 rounded flex items-center justify-center flex-shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
+                                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-semibold text-foreground group-hover:text-blue-400 transition-colors truncate">ACM</div>
+                              <div className="text-[10px] text-muted-foreground truncate">Computing</div>
+                            </div>
+                          </div>
+                        </a>
+                        <a 
+                          href="#" 
+                          className="flex-1 bg-gradient-to-br from-pink-500/10 to-purple-600/10 hover:from-pink-500/20 hover:to-purple-600/20 border border-pink-500/20 rounded-lg p-2.5 transition-all duration-300 group"
+                          title="ACM-W Magazine"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-pink-500/20 rounded flex items-center justify-center flex-shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-400">
+                                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-semibold text-foreground group-hover:text-pink-400 transition-colors truncate">ACM-W</div>
+                              <div className="text-[10px] text-muted-foreground truncate">Women in Tech</div>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                    </div>
+                    */}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Panel - Events Carousel and YouTube */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Events Carousel */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-3xl p-4 md:p-6 shadow-xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                    {isShowingPastEvents ? 'Past Events' : 'Upcoming Events'}
+                  </h2>
+                  <Link 
+                    href="/events" 
+                    className="w-13 h-13 md:w-11 md:h-11 bg-white text-black rounded-full flex items-center justify-center transition-transform duration-300 hover:rotate-45 flex-shrink-0"
+                    aria-label="View all events"
+                    title="View all events"
+                  >
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      className="w-6 h-6 md:w-7 md:h-7"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      fill="none"
+                    >
+                      <path d="M7 17L17 7M17 7H7M17 7V17"/>
+                    </svg>
+                  </Link>
+                </div>
+
+                {loading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                ) : error ? (
+                  <div className="text-center p-8 text-red-500">{error}</div>
+                ) : (
+                  <div className="relative">
+                    <Carousel
+                      opts={{
+                        align: 'center',
+                        loop: true,
+                        skipSnaps: false,
+                        containScroll: 'trimSnaps'
+                      }}
+                      className="w-full"
+                      setApi={(api) => {
+                        api?.on('select', () => {
+                          setActiveIndex(api.selectedScrollSnap());
+                          // Update past/upcoming status
+                          const allCarouselEvents = [...upcomingEvents, ...pastEvents];
+                          const activeEvent = allCarouselEvents[api.selectedScrollSnap()];
+                          if (activeEvent) {
+                            const eventDate = new Date(activeEvent.start_date);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            setIsShowingPastEvents(eventDate < today);
+                          }
+                        });
+                      }}
+                    >
+                      <CarouselContent className="-ml-2 md:-ml-4">
+                        {[...upcomingEvents, ...pastEvents].map((event, index) => (
+                          <CarouselItem key={event.id} className="pl-2 md:pl-4 basis-full md:basis-2/3 lg:basis-1/2 xl:basis-2/5">
+                            <div 
+                              className={`transition-all duration-300 h-full ${index === activeIndex ? 'scale-100 opacity-100' : 'scale-90 opacity-70'}`}
+                              onClick={() => setActiveIndex(index)}
+                            >
+                              <div className={`bg-card border ${index === activeIndex ? 'border-primary/50' : 'border-border/50'} rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow h-full flex flex-col`}>
+                                <div className="relative h-40">
+                                  <Image
+                                    src={event.agenda_image || event.image || event.event_template_image || event.event_homepage_image || 'https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768927076/sigai-logo_xk2vhl.webp'}
+                                    alt={event.title}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                  {event.is_featured && (
+                                    <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                                      New
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="p-4 flex-1 flex flex-col">
+                                  <h3 className="font-semibold text-foreground line-clamp-2 mb-2">
+                                    {event.title}
+                                  </h3>
+                                  <div className="flex items-center text-sm text-muted-foreground mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    {new Date(event.start_date).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                                    {event.description}
+                                  </p>
+                                  <Link 
+                                    href={`/events/${event.idx}`}
+                                    className="mt-auto text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center"
+                                  >
+                                    Learn more
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+                                      <path d="m9 18 6-6-6-6"/>
+                                    </svg>
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <div className="flex items-center justify-center gap-3 mt-6">
+                        <CarouselPrevious className="static transform-none translate-y-0 translate-x-0 w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-primary/50 bg-transparent hover:bg-primary/10 hover:border-primary text-primary transition-all duration-300" />
+                        <CarouselNext className="static transform-none translate-y-0 translate-x-0 w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-primary bg-primary/90 hover:bg-primary text-white hover:scale-110 transition-all duration-300" />
+                      </div>
+                    </Carousel>
+                  </div>
+                )}
+              </div>
+
+              {/* YouTube Section - Dynamic from JSON */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-3xl p-6 shadow-xl">
+                <h2 className="text-2xl font-bold text-foreground mb-6">YouTube Series</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {youtubeData.filter(item => item.type === 'video').map((item: YouTubeItem, idx: number) => (
+                    <div className="group" key={item.id}>
+                      <div
+                        className="aspect-video w-full bg-muted rounded-xl overflow-hidden relative shadow-lg group"
+                        style={{ cursor: 'pointer' }}
+                        tabIndex={0}
+                        aria-label={`Play ${item.title} video`}
+                        onMouseEnter={() => setPreviewStates(ps => ({ ...ps, [idx]: true }))}
+                        onMouseLeave={() => setPreviewStates(ps => ({ ...ps, [idx]: false }))}
+                        onFocus={() => setPreviewStates(ps => ({ ...ps, [idx]: true }))}
+                        onBlur={() => setPreviewStates(ps => ({ ...ps, [idx]: false }))}
+                      >
+                        {previewStates[idx] ? (
+                          <iframe
+                            src={`https://www.youtube.com/embed/${item.id}?autoplay=1&mute=1&loop=1&playlist=${item.id}&controls=0&modestbranding=1&rel=0`}
+                            title={item.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="absolute inset-0 w-full h-full"
+                          />
+                        ) : (
+                          <>
+                            <Image
+                              src={`https://img.youtube.com/vi/${item.id}/hqdefault.jpg`}
+                              alt={item.title}
+                              fill
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                              onError={e => {
+                                e.currentTarget.src = 'https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768927076/sigai-logo_xk2vhl.webp';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center transform transition-transform group-hover:scale-110">
+                                <svg className="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z" />
+                                </svg>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <h3 className="font-medium text-foreground">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 mt-6">
+                  <a 
+                    href="https://www.youtube.com/@RAITACMSIGAI" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors bg-white/5 border border-primary/20 rounded-full px-4 py-2 shadow-sm"
+                  >
+                    View all videos
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+                      <path d="m9 18 6-6-6-6"/>
+                    </svg>
+                  </a>
+                  <a
+                    href="/relai-lectures"
+                    className="inline-flex items-center text-sm font-medium text-primary border border-primary/30 rounded-full px-4 py-2 shadow-sm hover:bg-primary/10 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <rect x="2" y="7" width="20" height="10" rx="2"/>
+                      <polygon points="10 9 15 12 10 15 10 9"/>
+                    </svg>
+                    RELAI Lecture Series
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default AgendaSection;

@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Hiresh Nandodkar",
+    "title": "Chairperson",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925195/hiresh_chair_dtznu2.webp",
+    "color": "#d4ff00",
+    "testimony": "Guiding our chapter's vision and charting the course for the future of AI innovation.",
+    "spotifyUrl": "https://open.spotify.com/playlist/YOUR_PLAYLIST_ID_1",
+    "socials": {
+      "instagram": "https://www.instagram.com/hiresh_nandodkar",
+      "linkedin": "https://www.linkedin.com/in/hiresh-nandodkar-80487a31a/",
+      "github": "https://github.com/hir3sh"
+    }
+  },
+  {
+    "name": "Aastha Shetty",
+    "title": "Vice Chairperson",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925093/aastha_vc_edxeqe.webp",
+    "color": "#ff4d94",
+    "testimony": "Empowering our team and turning strategic vision into impactful action, every step of the way.",
+    "spotifyUrl": "https://open.spotify.com/playlist/YOUR_PLAYLIST_ID_2",
+    "socials": {
+      "instagram": "https://www.instagram.com/aastha_.shetty",
+      "linkedin": "https://www.linkedin.com/in/aastha-shetty-37386828b/",
+      "github": "https://github.com/aasthashettyy"
+    }
+  },
+  {
+    "name": "Rian Pardal",
+    "title": "General Secretary",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925093/rian_gs_mbudok.webp",
+    "color": "#a78bfa",
+    "testimony": "Connecting our community and chronicling our journey, ensuring our chapter's legacy is built to last.",
+    "spotifyUrl": "https://open.spotify.com/playlist/YOUR_PLAYLIST_ID_3",
+    "socials": {
+      "instagram": "https://www.instagram.com/rianpardal/",
+      "github": "https://github.com/Sunnyman022"
+    }
+  }
+]

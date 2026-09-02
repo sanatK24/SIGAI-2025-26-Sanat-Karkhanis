@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Dr. Sangita Chaudhari",
+    "role": "HOD of Computer Science & Engineering • Faculty Sponsor",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768928785/HODIT_znscwz.webp",
+    "aspectRatio": "1/1",
+    "socialLinks": {
+      "linkedin": "https://www.linkedin.com/in/dr-sangita-chaudhari-52b6731a/"
+    }
+  },
+  {
+    "name": "Dr. Pallavi Chavan",
+    "role": "HOD of Information Technology • Mentor",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768928782/pallavimam_fzrh1a.webp",
+    "aspectRatio": "1/1",
+    "socialLinks": {
+      "linkedin": "https://www.linkedin.com/in/pallavi-chavan-85b67922/"
+    }
+  }
+]

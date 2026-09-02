@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Instagram posts: public read, public write (for now)
+    match /instagram_posts/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Event list: public read, no write/update/delete
+    match /event_list/{docId} {
+      allow read: if true;
+      allow write, update, delete: if true; // TEMP: allow all writes for script, revert after use
+    }
+
+    // Secure public contact form submissions
+    match /contact_submissions/{docId} {
+      allow read, update, delete: if false;
+      allow create: if isContactValid();
+    }
+    function isContactValid() {
+      let data = request.resource.data;
+      return (
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 50 &&
+        data.email is string && data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,4}$') &&
+        data.message is string && data.message.size() >= 5 && data.message.size() <= 1000 &&
+        data.submittedAt == request.time &&
+        data.keys().hasOnly(['name', 'email', 'message', 'submittedAt'])
+      );
+    }
+
+    // Secure all event registration collections (allow read for rate limiting, allow create for submissions)
+    match /{collection}/{docId} {
+      allow create: if collection.matches('^registrations_.*$');
+      allow read: if collection.matches('^registrations_.*$');
+      allow update, delete: if false;
+    }
+
+    // Verified attendance: only admins can create
+    match /verified_attendance/{docId} {
+      allow create: if request.auth != null && request.auth.token.admin == true;
+      allow read, update, delete: if false;
+    }
+  }
+}

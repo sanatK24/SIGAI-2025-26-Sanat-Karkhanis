@@ -1,0 +1,28 @@
+[
+  {
+    "name": "Riddhi Patil",
+    "title": "Treasurer",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925102/riddhi_treasurer_bqo4uz.webp",
+    "color": "#22d3ee",
+    "testimony": "Fueling our chapter's ambitions by managing the financial resources that power our projects and growth.",
+    "spotifyUrl": "https://open.spotify.com/playlist/YOUR_PLAYLIST_ID_4",
+    "socials": {
+      "instagram": "https://www.instagram.com/riddhiiipatil",
+      "linkedin": "https://www.linkedin.com/in/riddhiiipatil1010/",
+      "github": "https://github.com/riddhiiipatil1010"
+    }
+  },
+  {
+    "name": "Sanat Karkhanis",
+    "title": "Webmaster",
+    "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925091/sanat_alxffu.webp",
+    "color": "#fb7185",
+    "testimony": "Building our chapter's digital world, connecting our community online, and bringing our events to a global audience.",
+    "spotifyUrl": "https://open.spotify.com/playlist/YOUR_PLAYLIST_ID_5",
+    "socials": {
+      "instagram": "https://www.instagram.com/sanatk_24",
+      "linkedin": "https://www.linkedin.com/in/sanat-karkhanis-3255a7214",
+      "github": "https://github.com/sanatK24"
+    }
+  }
+]

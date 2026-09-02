@@ -1,0 +1,38 @@
+  [
+    {
+      "name": "Soham Wankhede",
+      "role": "Chairperson",
+      "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925094/Soham_chair_lx1icp.webp",
+      "aspectRatio": "1/1",
+      "testimony": "It was an honor to help found a chapter that's more than just a committee. We've built a true hub for AI enthusiasts to collaborate, innovate, and create a legacy with national impact.",
+      "socials": {
+        "instagram": "https://instagram.com/sohxm.__",
+        "linkedin": "https://www.linkedin.com/in/soham-wankhede-573121302/",
+        "github": "https://github.com/githubian018"
+      }
+    },
+    {
+      "name": "Prapti Sinha",
+      "role": "Vice Chairperson",
+      "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925098/Prapti_vicechair_mvh84k.webp",
+      "aspectRatio": "1/1",
+      "testimony": "Being a founding member of SIGAI has been an incredible journey. We've created a community where members don't just learn—they innovate together, turning ideas into real-world impact.",
+      "socials": {
+        "instagram": "https://instagram.com/prapti_910",
+        "linkedin": "https://www.linkedin.com/in/praptisinha/",
+        "github": "https://github.com/SanyaSinha"
+      }
+    },
+    {
+      "name": "Amey Shete",
+      "role": "General Secretary",
+      "image": "https://res.cloudinary.com/dkqlmsxtg/image/upload/v1768925101/Amey_GS_lrmicv.webp",
+      "aspectRatio": "1/1",
+      "testimony": "SIGAI has grown into a vibrant community that truly bridges the gap between theory and real-world application. What makes us special is our collaborative spirit—we don't just learn, we innovate together.",
+      "socials": {
+        "instagram": "https://instagram.com/_aaameyyy_",
+        "linkedin": "https://www.linkedin.com/in/amey-shete/",
+        "github": "https://github.com/Amey79000"
+      }
+    }
+  ]
